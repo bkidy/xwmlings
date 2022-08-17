@@ -4,10 +4,10 @@ import xlwings as xw
 class ROLE():
 
     def __init__(self):
-        self.tree_url = ''
-        self.rolelist_url = ''
+        self.tree_url = 'https://bgateway.joyobpo.com/basic/role/getRoleMenuActionTree'
+        self.rolelist_url = 'https://bgateway.joyobpo.com/basic/role/multiList'
         # self.token = input("请输入最新的Token：")
-        self.token = ''
+        self.token = 'eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI5Mjg2MjY1MTM3MTA5NDAxNjAiLCJ1c2VySWQiOjkyODYyNjUxMzcxMDk0MDE2MCwidXNlck5hbWUiOiLlup7lrofpuY8iLCJwaG9uZSI6IjE4NzY4MTEwMjI5IiwicGxhdGZvcm0iOiJQQ19DTElFTlQiLCJpcCI6IjM5LjE3MC40Mi43NCIsImRldmljZUlkIjoicWwiLCJyb290T3JnSWQiOjEsIm9yZ0lkIjo5NTY1OTA3NDA3NDQ0NDU5NTQsInN0YWZmSWQiOjkyODYyNjQ3NjEwNDgxMDQ5OSwic3RhZmZOYW1lIjoi5bqe5a6H6bmPIiwic3RhZmZDb2RlIjoiSlkwNzMxNiIsInBvc3RJZCI6OTU2NTkwNzQxMjQ3NzYyNDMyLCJwb3N0TmFtZSI6IuS6p-WTgee7j-eQhiIsInN1cGVyQWRtaW4iOjAsImNvbXBhbnlUeXBlIjoxLCJpYXQiOjE2NjA2MjQyNTMsImV4cCI6MTY2MDc5NzA1M30.8c7YgZ3JJ0GZjbhzUeDq3qpc8GnRze3qLJ-dGt6EO7Y'
         self.headers = {
             "accept":"application/json",
             "accept-encoding": "gzip, deflate, br",
@@ -30,7 +30,11 @@ class ROLE():
             "rootOrgId": "1"
         }
         role = requests.post(self.rolelist_url,json=role_data,headers=self.headers)
+        print(role.status_code)
         role_josn = role.json().get("data").get("pageInfo").get("list")
+        for i in role_josn:
+            roleLabel = i.get('roleLabel')
+            print(i)
         return role_josn
 
 
@@ -98,7 +102,6 @@ class ROLE():
             tl.save()
             tl.close()
 
-
     def insert_role_label(self):
         role_label_list = []
         for role in ROLE().get_role():
@@ -149,4 +152,4 @@ class ROLE():
 
 
 
-ROLE().insert_role_data()
+ROLE().get_role()
