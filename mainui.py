@@ -79,20 +79,20 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.btn_q_role.clicked.connect(MainWindow.queryRoleList)
-        # self.btn_q_tree.clicked.connect(MainWindow.queryRoleTree)
+        self.comboBox.currentIndexChanged.connect(MainWindow.selectRole)
+        self.btn_q_role.clicked.connect(MainWindow.queryRoleData)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "图灵权限助手——By Elliot"))
         self.label_2.setText(_translate("MainWindow", "状态："))
         self.btn_discard.setText(_translate("MainWindow", "放弃"))
         self.btn_exportAll.setText(_translate("MainWindow", "导出全部"))
         self.label.setText(_translate("MainWindow", "更新完成请保存更新的数据！"))
-        self.lineEdit.setPlaceholderText(_translate("MainWindow", "TOKEN"))
-        self.btn_q_role.setText(_translate("MainWindow", "更新菜单"))
+        self.lineEdit.setPlaceholderText(_translate("MainWindow", "请输入TOKEN："))
+        self.btn_q_role.setText(_translate("MainWindow", "更新数据"))
         self.btnexportNew.setText(_translate("MainWindow", "导出更新"))
-        self.btn_q_tree.setText(_translate("MainWindow", "更新权限"))
+        self.btn_q_tree.setText(_translate("MainWindow", "改动预览"))
         self.btn_save.setText(_translate("MainWindow", "保存"))
