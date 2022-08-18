@@ -9,7 +9,6 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-import sys
 
 
 class Ui_MainWindow(object):
@@ -68,6 +67,16 @@ class Ui_MainWindow(object):
         self.textEdit = QtWidgets.QTextEdit(self.centralwidget)
         self.textEdit.setObjectName("textEdit")
         self.gridLayout_2.addWidget(self.textEdit, 1, 0, 2, 2)
+        self.treeWidget = QtWidgets.QTreeWidget(self.centralwidget)
+        self.treeWidget.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.treeWidget.setAllColumnsShowFocus(False)
+        self.treeWidget.setWordWrap(False)
+        self.treeWidget.setHeaderHidden(False)
+        self.treeWidget.setColumnCount(2)
+        self.treeWidget.setObjectName("treeWidget")
+        self.treeWidget.header().setCascadingSectionResizes(False)
+        self.treeWidget.header().setDefaultSectionSize(222)
+        self.gridLayout_2.addWidget(self.treeWidget, 2, 2, 2, 2)
         self.gridLayout.addLayout(self.gridLayout_2, 2, 1, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
@@ -79,8 +88,9 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.comboBox.currentIndexChanged.connect(MainWindow.selectRole)
-        self.btn_q_role.clicked.connect(MainWindow.queryRoleData)
+        # self.btn_save.clicked.connect(MainWindow.save_right_after)
+        self.comboBox.currentIndexChanged.connect(MainWindow.select_role)
+        self.btn_q_role.clicked.connect(MainWindow.update_role_data)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
 
@@ -96,3 +106,5 @@ class Ui_MainWindow(object):
         self.btnexportNew.setText(_translate("MainWindow", "导出更新"))
         self.btn_q_tree.setText(_translate("MainWindow", "改动预览"))
         self.btn_save.setText(_translate("MainWindow", "保存"))
+        self.treeWidget.headerItem().setText(0, _translate("MainWindow", "菜单"))
+        self.treeWidget.headerItem().setText(1, _translate("MainWindow", "操作"))
