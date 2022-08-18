@@ -255,7 +255,7 @@ class MainWindow(QMainWindow):
     def pre_changed(self):
         con = MainWindow.sql_connection(1)
         cursor_obj = con.cursor()
-        action_cgd_sql = "SELECT role_label,menu_top_label,menu_second_label,action_label,action_id FROM role_menu_action WHERE is_changed =1 AND is_right_after = ? GROUP BY role_id ORDER BY action_id".format()
+        action_cgd_sql = "SELECT role_label,menu_top_label,menu_second_label,action_label,action_id FROM role_menu_action WHERE is_changed =1 AND is_right_after = ? ORDER BY action_id".format()
         action_add_cgd = cursor_obj.execute(action_cgd_sql,(1,))
         action_add = []
         role_add = []
@@ -265,12 +265,13 @@ class MainWindow(QMainWindow):
                     self.ui.textEdit.append("角色： %s\n" % role_add)
                     role_add = []
                 action_label = item[1] +"-" + item[2]+ "::" + item[3]
-                self.ui.textEdit.append("本次新增权限：%s\n" % action_label)
+                self.ui.textEdit.append("\n本次新增权限：%s" % action_label)
                 role_add.append("【%s】" % item[0])
                 action_add.append(item[4])
             elif item[4] in action_add:
                 role_add.append("【%s】" % item[0])
-        self.ui.textEdit.append("角色： %s\n" % role_add)
+        if role_add:
+            self.ui.textEdit.append("角色： %s\n" % role_add)
 
         action_move_cgd = cursor_obj.execute(action_cgd_sql,(0,))
         action_move = []
@@ -281,12 +282,13 @@ class MainWindow(QMainWindow):
                     self.ui.textEdit.append("角色： %s\n" % role_move)
                     role_move = []
                 action_label = item[1] +"-" + item[2]+ "::" + item[3]
-                self.ui.textEdit.append("本次移除权限：%s\n" % action_label)
+                self.ui.textEdit.append("\n本次移除权限：%s" % action_label)
                 role_move.append("【%s】" % item[0])
                 action_move.append(item[4])
             elif item[4] in action_move:
                 role_move.append("【%s】" % item[0])
-        self.ui.textEdit.append("角色： %s\n" % role_move)
+        if role_move:
+            self.ui.textEdit.append("角色： %s\n" % role_move)
 
 
     def select_role(self):
