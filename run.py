@@ -3,9 +3,17 @@ from tkinter import SEL
 import mainui
 import requests
 import sqlite3
+from enum import Enum
 from sqlite3 import Error
-from PyQt5.QtWidgets import QApplication, QMainWindow,QTreeWidgetItem
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTreeWidgetItem, QTreeWidgetItemIterator
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QIcon
+
+
+class Range(Enum):
+    全部数据 = 1
+    本人 = 0
+    本部门或以下 = 4
 
 
 class MainWindow(QMainWindow):
@@ -13,7 +21,6 @@ class MainWindow(QMainWindow):
         super(MainWindow, self).__init__()
         self.ui = mainui.Ui_MainWindow()
         self.ui.setupUi(self)
-        self.ui.textEdit.append("欢迎使用权限配置助手，请点击下方【更新角色】开始操作\n")
         self.url_role = 'https://bgateway.joyobpo.com/basic/role/multiList'
         self.url_tree = 'https://bgateway.joyobpo.com/basic/role/getRoleMenuActionTree'
         self.headers = {
@@ -55,9 +62,9 @@ class MainWindow(QMainWindow):
         for row in role_data:
             self.ui.comboBox.addItem(row[1], userData=str(row[0]))
         current_role = self.ui.comboBox.currentData()
-        MainWindow.show_role_right(self,current_role)
+        MainWindow.show_role_right(self, current_role)
 
-    def show_role_right(self,current_role):
+    def show_role_right(self, current_role):
         self.ui.treeWidget.clear()
         con = MainWindow.sql_connection(1)
         cursor_obj = con.cursor()
@@ -68,36 +75,74 @@ class MainWindow(QMainWindow):
         for item in query_role_right:
             if item[3] != top_menu_id:
                 top_menu = QTreeWidgetItem(self.ui.treeWidget)
-                self.ui.treeWidget.topLevelItem(self.ui.treeWidget.topLevelItemCount()-1).setText(0,item[4])
+                self.ui.treeWidget.topLevelItem(self.ui.treeWidget.topLevelItemCount() - 1).setText(0, item[4])
                 top_menu_id = item[3]
             if item[5] != second_menu_id:
                 second_menu = QTreeWidgetItem(top_menu)
-                second_menu.setText(0,item[6])
+                second_menu.setText(0, item[6])
                 second_menu_id = item[5]
             action = QTreeWidgetItem(second_menu)
-            action.setData(0,1,item[7])
-            action.setText(0,item[8])
-            
+            # checked = ("添加 %s-%s：%s" % (item[4],item[6],item[8]))
+            action.setData(1, 1, [item[0], item[2], item[4], item[6], item[8], item[9], item[11]])
+            action.setText(0, item[8])
             if item[11] == 1:
-                # is_right = "True"
-                action.setCheckState(0,Qt.Checked)
+                action.setIcon(0, QIcon('./icon/checked.png'))
             else:
-                # is_right = "False"
-                action.setCheckState(0,Qt.Unchecked)
+                action.setIcon(0, QIcon('./icon/unchecked.png'))
             if item[12] == 1:
-                action.setCheckState(1,Qt.Checked)
+                action.setCheckState(1, Qt.Checked)
             else:
-                action.setCheckState(1,Qt.Unchecked)
+                action.setCheckState(1, Qt.Unchecked)
             # self.ui.textEdit.append(str(action.data(0,1)))
         self.ui.treeWidget.expandAll()
-        
-    # def save_right_after(self):
-        # con = MainWindow.sql_connection(1)
-        # cursor_obj = con.cursor()
-        # action_id = str(self.ui.treeWidget.findItems(0).data(0,1))
-        # self.ui.textEdit.append(action_id)
 
+    def save_right_after(self):
+        con = MainWindow.sql_connection(1)
+        cursor_obj = con.cursor()
+        update_sql = "UPDATE role_menu_action SET is_right_after = ?, is_changed = 1 WHERE id = ? ".format()
+        iterator = QTreeWidgetItemIterator(self.ui.treeWidget)
+        role_label = self.ui.comboBox.currentText()
+        self.ui.textEdit.append("\n【%s】权限调整如下：" % role_label)
+        while iterator.value():
+            item = iterator.value()
+            # self.ui.textEdit.append(str(item.data(1,1)))
+            old_action = item.data(1, 1)
+            action_ck = item.checkState(1)
+            if action_ck == 2:
+                action_ck = 1
+            if old_action:
+                if old_action[6] != action_ck:
+                    if action_ck == 1:
+                        self.ui.textEdit.append("新增： %s-%s:%s " % (old_action[2], old_action[3], old_action[4]))
+                    else:
+                        self.ui.textEdit.append("移除： %s-%s:%s " % (old_action[2], old_action[3], old_action[4]))
+                    try:
+                        cursor_obj.execute(update_sql, (action_ck, old_action[0]))
+                        con.commit()
+                    except Error as e:
+                        self.ui.textEdit.append(str(e))
+            iterator += 1
+        con.close()
 
+    def discard_changed(self):
+        con = MainWindow.sql_connection(1)
+        cursor_obj = con.cursor()
+        update_sql = "UPDATE role_menu_action SET is_right_after = ?, is_changed = 0 WHERE id = ? ".format()
+        iterator = QTreeWidgetItemIterator(self.ui.treeWidget)
+        while iterator.value():
+            item = iterator.value()
+            old_action = item.data(1, 1)
+            if old_action:
+                action_ck = old_action[6]
+                try:
+                    cursor_obj.execute(update_sql, (action_ck, old_action[0]))
+                    con.commit()
+                except Error as e:
+                    self.ui.textEdit.append(str(e))
+            iterator += 1
+        con.close()
+        MainWindow.show_role_right(self,self.ui.comboBox.currentData())
+        self.ui.textEdit.append("\n【%s】权限已重置成线上数据" % self.ui.comboBox.currentText())
 
     # 获取角色列表
     def get_role_list(self, token):
@@ -207,10 +252,47 @@ class MainWindow(QMainWindow):
                             self.ui.textEdit.append(str(e))
             self.ui.textEdit.append("%s 权限更新完成" % role_label)
 
+    def pre_changed(self):
+        con = MainWindow.sql_connection(1)
+        cursor_obj = con.cursor()
+        action_cgd_sql = "SELECT role_label,menu_top_label,menu_second_label,action_label,action_id FROM role_menu_action WHERE is_changed =1 AND is_right_after = ? GROUP BY role_id ORDER BY action_id".format()
+        action_add_cgd = cursor_obj.execute(action_cgd_sql,(1,))
+        action_add = []
+        role_add = []
+        for item in action_add_cgd:
+            if item[4] not in action_add:
+                if role_add:
+                    self.ui.textEdit.append("角色： %s\n" % role_add)
+                    role_add = []
+                action_label = item[1] +"-" + item[2]+ "::" + item[3]
+                self.ui.textEdit.append("本次新增权限：%s\n" % action_label)
+                role_add.append("【%s】" % item[0])
+                action_add.append(item[4])
+            elif item[4] in action_add:
+                role_add.append("【%s】" % item[0])
+        self.ui.textEdit.append("角色： %s\n" % role_add)
+
+        action_move_cgd = cursor_obj.execute(action_cgd_sql,(0,))
+        action_move = []
+        role_move = []
+        for item in action_move_cgd:
+            if item[4] not in action_move:
+                if role_move:
+                    self.ui.textEdit.append("角色： %s\n" % role_move)
+                    role_move = []
+                action_label = item[1] +"-" + item[2]+ "::" + item[3]
+                self.ui.textEdit.append("本次移除权限：%s\n" % action_label)
+                role_move.append("【%s】" % item[0])
+                action_move.append(item[4])
+            elif item[4] in action_move:
+                role_move.append("【%s】" % item[0])
+        self.ui.textEdit.append("角色： %s\n" % role_move)
+
+
     def select_role(self):
         self.ui.label_2.setText(self.ui.comboBox.currentData())
         current_role = self.ui.comboBox.currentData()
-        MainWindow.show_role_right(self,current_role)
+        MainWindow.show_role_right(self, current_role)
 
 
 if __name__ == '__main__':
