@@ -4,7 +4,6 @@ import sys, re
 from sqlite3 import Error
 import smtplib
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 # 构建邮件头
 from email.header import Header
 
@@ -220,8 +219,12 @@ class MainWindow(QMainWindow):
             "rootOrgId": "1"
         }
         j_role_list = requests.post(url_role, json=json_data, headers=self.headers)
-        role_list = j_role_list.json().get("data").get("pageInfo").get("list")
-        return role_list
+        if j_role_list.json()["data"]:
+            role_list = j_role_list.json().get("data").get("pageInfo").get("list")
+            return role_list
+        else:
+            QMessageBox.critical(self, "Error", "Token 错误！", QMessageBox.Yes)
+            return False
 
     # 获取角色权限包
     def get_role_tree(self, post_data):
@@ -249,76 +252,79 @@ class MainWindow(QMainWindow):
 
         # 获取线上角色列表
         role_list = MainWindow.get_role_list(self, token)
-        for role in role_list:
-            role_id = role["id"]
-            role_label = role["roleLabel"]
-            self.ui.comboBox.addItem(role_label, userData=role_id)
-            try:
-                self.cur.execute(role_sql, (role_id, role_label))
-                self.con.commit()
-            except Error as e:
-                self.ui.textBrowser.append(str(e))
-            role_id_adm_type_dto_list = role.get("roleIdAdmTypeDtoList")
-            QApplication.processEvents()
-            self.ui.textBrowser.append("\n获取到角色：【%s】\n开始更新角色权限..." % role_label)
-            j_user_role = MainWindow.get_role_tree(self, role_id_adm_type_dto_list)
-            user_role = j_user_role.get("data").get("menuTreeByTuring")
-            for topMenu in user_role:
-                # 获取一级菜单数据
-                menu_top_id = topMenu.get("menuId")
-                menu_pid = topMenu.get("menuPId")
-                menu_top_label = topMenu.get("menuLabel")
-                # 向数据库写入一级菜单数据
-                if role_id == "1":
-                    try:
-                        self.cur.execute(menu_sql, (menu_top_id, menu_pid, menu_top_label))
-                        self.con.commit()
-                        QApplication.processEvents()
-                        self.ui.textBrowser.append("\n更新一级菜单：【%s】..." % menu_top_label)
-                    except Error as e:
-                        self.ui.textBrowser.append(str(e))
-                for childMenu in topMenu.get("children"):
-                    # 获取二级菜单数据
-                    menu_second_id = childMenu.get("menuId")
-                    menu_pid = childMenu.get("menuPId")
-                    menu_second_label = childMenu.get("menuLabel")
+        if not role_list:
+            QMessageBox.critical(self, "Error", "Token 错误！", QMessageBox.Yes)
+        else:
+            for role in role_list:
+                role_id = role["id"]
+                role_label = role["roleLabel"]
+                self.ui.comboBox.addItem(role_label, userData=role_id)
+                try:
+                    self.cur.execute(role_sql, (role_id, role_label))
+                    self.con.commit()
+                except Error as e:
+                    self.ui.textBrowser.append(str(e))
+                role_id_adm_type_dto_list = role.get("roleIdAdmTypeDtoList")
+                QApplication.processEvents()
+                self.ui.textBrowser.append("\n获取到角色：【%s】\n开始更新角色权限..." % role_label)
+                j_user_role = MainWindow.get_role_tree(self, role_id_adm_type_dto_list)
+                user_role = j_user_role.get("data").get("menuTreeByTuring")
+                for topMenu in user_role:
+                    # 获取一级菜单数据
+                    menu_top_id = topMenu.get("menuId")
+                    menu_pid = topMenu.get("menuPId")
+                    menu_top_label = topMenu.get("menuLabel")
+                    # 向数据库写入一级菜单数据
                     if role_id == "1":
                         try:
-                            self.cur.execute(menu_sql, (menu_second_id, menu_pid, menu_second_label))
+                            self.cur.execute(menu_sql, (menu_top_id, menu_pid, menu_top_label))
                             self.con.commit()
                             QApplication.processEvents()
-                            self.ui.textBrowser.append("+ 更新二级菜单：【%s】..." % menu_second_label)
+                            self.ui.textBrowser.append("\n更新一级菜单：【%s】..." % menu_top_label)
                         except Error as e:
                             self.ui.textBrowser.append(str(e))
-                    for action in childMenu.get("actions"):
-                        # 获取动作数据
-                        action_code = action.get("actionCode")
-                        action_id = action.get("actionId")
-                        action_label = action.get("actionLabel")
-                        action_ck = action.get("checked")
-                        if action_ck:
-                            action_ck = 1
-                        else:
-                            action_ck = 0
-                        range_code = action.get("range")
-                        # 写入动作数据
+                    for childMenu in topMenu.get("children"):
+                        # 获取二级菜单数据
+                        menu_second_id = childMenu.get("menuId")
+                        menu_pid = childMenu.get("menuPId")
+                        menu_second_label = childMenu.get("menuLabel")
                         if role_id == "1":
                             try:
-                                self.cur.execute(action_sql, (action_id, action_code, action_label, menu_second_id))
+                                self.cur.execute(menu_sql, (menu_second_id, menu_pid, menu_second_label))
                                 self.con.commit()
-                                self.ui.textBrowser.append("+++ 更新操作菜单：【%s】" % action_label)
+                                QApplication.processEvents()
+                                self.ui.textBrowser.append("+ 更新二级菜单：【%s】..." % menu_second_label)
                             except Error as e:
                                 self.ui.textBrowser.append(str(e))
-                        # 写入用户权限包
-                        try:
-                            self.cur.execute(user_sql, (
-                                role_id, role_label, menu_top_id, menu_top_label, menu_second_id, menu_second_label,
-                                action_id, action_label, range_code, action_ck, action_ck))
-                            self.con.commit()
-                        except Error as e:
-                            self.ui.textBrowser.append(str(e))
-            self.ui.textBrowser.append("\n【%s】 权限更新完成" % role_label)
-        self.show_role_right(self.ui.comboBox.currentData())
+                        for action in childMenu.get("actions"):
+                            # 获取动作数据
+                            action_code = action.get("actionCode")
+                            action_id = action.get("actionId")
+                            action_label = action.get("actionLabel")
+                            action_ck = action.get("checked")
+                            if action_ck:
+                                action_ck = 1
+                            else:
+                                action_ck = 0
+                            range_code = action.get("range")
+                            # 写入动作数据
+                            if role_id == "1":
+                                try:
+                                    self.cur.execute(action_sql, (action_id, action_code, action_label, menu_second_id))
+                                    self.con.commit()
+                                    self.ui.textBrowser.append("+++ 更新操作菜单：【%s】" % action_label)
+                                except Error as e:
+                                    self.ui.textBrowser.append(str(e))
+                            # 写入用户权限包
+                            try:
+                                self.cur.execute(user_sql, (
+                                    role_id, role_label, menu_top_id, menu_top_label, menu_second_id, menu_second_label,
+                                    action_id, action_label, range_code, action_ck, action_ck))
+                                self.con.commit()
+                            except Error as e:
+                                self.ui.textBrowser.append(str(e))
+                self.ui.textBrowser.append("\n【%s】 权限更新完成" % role_label)
+            self.show_role_right(self.ui.comboBox.currentData())
 
     def pre_changed(self):
         action_cgd_sql = "SELECT role_label,menu_top_label,menu_second_label,action_label,action_id FROM role_menu_action WHERE is_changed =1 AND is_right_after = ? ORDER BY action_id".format()
@@ -419,7 +425,8 @@ class EmailForm(QDialog):
     def close(self) -> bool:
         self.setParent(None)
         self.deleteLater()
-        return super(EmailForm,self).close()
+        return super(EmailForm, self).close()
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
