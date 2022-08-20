@@ -1,0 +1,7 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource>
+        <file alias="icon/checked.png">icon/checked.png</file>
+        <file alias="icon/unchecked.png">icon/unchecked.png</file>
+    </qresource>
+</RCC>
